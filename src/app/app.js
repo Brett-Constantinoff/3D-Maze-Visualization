@@ -483,11 +483,10 @@ class App{
             }
 
         }
-        //console.log(this.state.camera.front);
 
         //move camera and get the view matrix
         this.state.camera.move(deltaTime);
-        //console.log(this.state.camera.position);
+        console.log(this.state.camera.position);
         let viewMatrix = mat4.create();
         let front = vec3.create();
         vec3.add(front, this.state.camera.position, this.state.camera.front);
