@@ -27,11 +27,10 @@ class App{
             maze: {
                 needsGenerating: false,
                 needsClearing: false,
+                mazeIndex: 0,
                 start: null,
                 width: 50,
                 height: 50,
-                pathIndex: 0,
-                paths: [],
                 dfs:{
                     colour: vec3.fromValues(0.93, 0.58, 0.30),
                     getOrder: false,
@@ -56,9 +55,6 @@ class App{
                     dfs: null,
                 }
             },
-            sliders: {
-                mazeSize: null
-            },
             flags: {
                 reset: false,
                 generate: false,
@@ -69,7 +65,6 @@ class App{
             },
             camera: null,
             objects: {
-                skybox: null,
                 plane: null,
                 lights: [],
                 cubes: [],
@@ -174,7 +169,6 @@ class App{
             }
         }
 
-       
 
         //pick the start cube and change its colour
         var index = Math.floor((this.state.maze.width * this.state.maze.height) / 2.0 + (this.state.maze.width / 2));
@@ -216,7 +210,7 @@ class App{
         //get maze generation button
         this.state.buttons.generate = document.querySelector("#generateMazeButton");
         this.state.buttons.generate.addEventListener("click", () => {
-            console.log("Beginning Generation..");
+            console.log("Beginning Maze Generation..");
 
             //add the initial walls to the wall-list
             this.state.maze.start.neighbours.forEach(n => {
@@ -244,7 +238,7 @@ class App{
         //disable by default
         this.state.buttons.solve.bfs.disabled = true;
         this.state.buttons.solve.bfs.addEventListener("click", () => {
-            console.log("Beginning BFS solve..");
+            console.log("Beginning BFS..");
 
             //set flags
             this.state.flags.generate = false;
@@ -264,7 +258,7 @@ class App{
         //disable by default
         this.state.buttons.solve.dfs.disabled = true;
         this.state.buttons.solve.dfs.addEventListener("click", () => {
-            console.log("Beginning DFS solve..");
+            console.log("Beginning DFS..");
 
             //set flags
             this.state.flags.generate = false;
@@ -287,6 +281,12 @@ class App{
         this.state.deltaTime = deltaTime;
         this.state.time += this.state.deltaTime;
 
+        //resize the maze if neccessary
+        if(this.state.maze.resize){
+            this.resize();
+            this.state.maze.resize = false;
+        }
+
         //render the start maze position
         this.state.maze.start.render = true;
         this.state.maze.start.material.diffuse = vec3.fromValues(0.0, 1.0, 0.0);    
@@ -294,13 +294,8 @@ class App{
         //clear the paths of the maze
         if(this.state.flags.reset){
             //maze reset complete
-            if(this.state.maze.pathIndex === this.state.maze.paths.length){
+            if(this.state.maze.mazeIndex === this.state.objects.deRendered.length){
                 console.log("Maze reset complete");
-
-                //clear the paths
-                this.state.maze.paths = [];
-                //clear the path index
-                this.state.maze.pathIndex = 0;
 
                 //reset flags
                 this.state.flags.reset = false;
@@ -326,15 +321,17 @@ class App{
                 //re-enable generation
                 this.state.buttons.generate.disabled = false;
 
+                //reset the maze index
+                this.state.maze.mazeIndex = 0;
             }
             else{
                 //only clear the path if its not the end location
-                if(this.state.maze.paths[this.state.maze.pathIndex] != this.state.objects.lastWall){
-                    this.state.maze.paths[this.state.maze.pathIndex].render = false;
+                if(this.state.objects.deRendered[this.state.maze.mazeIndex] != this.state.objects.lastWall){
+                    this.state.objects.deRendered[this.state.maze.mazeIndex].render = false;
                 }
                 //the path is no longer visited
-                this.state.maze.paths[this.state.maze.pathIndex].visited = false;
-                this.state.maze.pathIndex++;
+                this.state.objects.deRendered[this.state.maze.mazeIndex].visited = false;
+                this.state.maze.mazeIndex++;
             }
         }
 
@@ -349,7 +346,6 @@ class App{
                 if(this.state.objects.deRendered.length > 0){
                     this.state.objects.deRendered[this.state.objects.deRendered.length - 1].material.diffuse = vec3.fromValues(0.0, 0.0, 1.0);
                     this.state.objects.deRendered[this.state.objects.deRendered.length - 1].render = true;
-                    //the wall is no longer a path
                     this.state.objects.deRendered[this.state.objects.deRendered.length - 1].isPath = false;
                     this.state.objects.deRendered.pop();
                 }
@@ -367,11 +363,12 @@ class App{
                     //dont want to re-generate the maze every frame
                     this.state.maze.needsGenerating = false;
                 }
+            
                 //visualize the maze
                 else{
                     //visualization complete
                     if(this.state.objects.deRenderedIndex === this.state.objects.deRendered.length){
-                        console.log("Generation Complete");
+                        console.log("Maze Generation Complete");
 
                         //re-render the last wall, making it the solve location
                         this.state.objects.lastWall.render = true;
@@ -389,9 +386,6 @@ class App{
                         //re-enable the solving buttons
                         this.state.buttons.solve.bfs.disabled = false;
                         this.state.buttons.solve.dfs.disabled = false;
-
-                        //reset the de-rendered index
-                        this.state.objects.deRenderedIndex = 0;
                     }
                     //visualize next path
                     else{
@@ -415,7 +409,7 @@ class App{
 
             //maze is solved, stop visualizing
             if(this.state.maze.dfs.isSolved){
-                console.log("Depth First Search Complete");
+                console.log("DFS Complete");
 
                 //maze is no longer solved
                 this.state.maze.dfs.isSolved = false;
@@ -456,7 +450,7 @@ class App{
 
             //stop visualizing, maze is solved
             if(this.state.maze.bfs.isSolved){
-                console.log("Breadth First Search Compelete");
+                console.log("BFS Compelete");
 
                 //maze is no longer solved
                 this.state.maze.bfs.isSolved = false;
@@ -482,9 +476,11 @@ class App{
             }
 
         }
+        //console.log(this.state.camera.front);
 
         //move camera and get the view matrix
         this.state.camera.move(deltaTime);
+        //console.log(this.state.camera.position);
         let viewMatrix = mat4.create();
         let front = vec3.create();
         vec3.add(front, this.state.camera.position, this.state.camera.front);
@@ -501,19 +497,18 @@ class App{
             projectionMatrix, 
             degToRad(45.0),
             this.state.canvas.clientWidth / this.state.canvas.clientHeight,
-            0.1,
-            //things wont clip as closely
-            500.0
+            0.1, 
+            100.0
         );
 
        //update global uniforms
        this.state.context.useProgram(this.state.shader.program);
        this.state.shader.setMat4(this.state.shader.info.uniformLocations.view, viewMatrix);
        this.state.shader.setMat4(this.state.shader.info.uniformLocations.projection, projectionMatrix);
-       
-       //these are all for lighting
+
        var sceneLight = this.state.objects.lights[0];
        this.state.shader.setVec3(this.state.shader.info.uniformLocations.cameraPos, this.state.camera.position);
+
        this.state.shader.setVec3(this.state.shader.info.uniformLocations.lightColour, sceneLight.colour);
        this.state.shader.setVec3(this.state.shader.info.uniformLocations.lightPosition, sceneLight.position);
        this.state.shader.setFloat(this.state.shader.info.uniformLocations.lightStrength, sceneLight.strength);
@@ -526,6 +521,7 @@ class App{
         this.state.objects.plane.draw();
 
         //render the cubes
+        
         this.state.objects.cubes.forEach(cube => {
             if(cube.render){
                 cube.draw();
@@ -538,15 +534,10 @@ class App{
     //start of the frame, things that happen before the 
     //frame is updated go here
     startFrame(){
-        //background colour
         this.state.context.clearColor(0.5, 0.5, 0.5, 1.0);
-        //want to clear everything
         this.state.context.clearDepth(1.0);
-        //enable for 3D rendering
         this.state.context.enable(this.state.context.DEPTH_TEST);
-        //clear the colour and depth buffer
         this.state.context.clear(this.state.context.COLOR_BUFFER_BIT | this.state.context.DEPTH_BUFFER_BIT);
-        //render near things first
         this.state.context.depthFunc(this.state.context.LEQUAL);
     }
 
@@ -554,6 +545,10 @@ class App{
     endFrame(){
 
     }
+
+
+       
+
 
     generateMaze(){
 
@@ -583,8 +578,6 @@ class App{
                 //de-render the wall, make it a path and add it the de-rendered list
                 wall.isPath = true;
                 this.state.objects.deRendered.push(wall);
-                //add the wall to the path list, for reseting later
-                this.state.maze.paths.push(wall);
                 //add each neigbour of the current path to the wall list
                 wall.neighbours.forEach(n => {
                     this.state.objects.wallList.push(n);
@@ -599,7 +592,6 @@ class App{
     }
 
     depthFirstSearch(startPos){
-        //shuffling allows for new visualization each time
         shuffle(startPos.neighbours);
         startPos.neighbours.forEach(n => {
             if(n === this.state.objects.lastWall){
@@ -626,7 +618,6 @@ class App{
                 continue;
             }
             this.state.maze.bfs.bfsOrder.push(curr);
-            //shuffling allows for new visualization each time
             shuffle(curr.neighbours);
             curr.neighbours.forEach(n => {
                 if(n === this.state.objects.lastWall){
@@ -642,3 +633,11 @@ class App{
     }
 }
 
+function shuffle(array){
+    for(var i = array.length - 1; i > 0; i--){
+        var j = Math.floor(Math.random() * (i + 1));
+        var temp = array[i];
+        array[i] = array[j];
+        array[j] = temp;
+    }
+}
