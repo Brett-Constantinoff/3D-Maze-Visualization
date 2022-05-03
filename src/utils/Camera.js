@@ -18,7 +18,6 @@ class Camera{
             keyRIGHT: false,
             keyDOWN: false
         };
-        this.firstUpdate = true;
         this.init();
     }
 
@@ -97,26 +96,18 @@ class Camera{
         }
 
         if(this.keys.keyRIGHT){
-            this.firstUpdate = false;
-        
             this.yaw += 2.0;
         }
 
         if(this.keys.keyLEFT){
-            this.firstUpdate = false;
-        
             this.yaw -= 2.0;
         }
 
         if(this.keys.keyUP){
-            this.firstUpdate = false;
-        
             this.pitch += 2.0;
         }
 
         if(this.keys.keyDOWN){
-            this.firstUpdate = false;
-        
             this.pitch -= 2.0;
         }
 
